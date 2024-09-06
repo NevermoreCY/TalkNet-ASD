@@ -599,7 +599,7 @@ def visualization(tracks, scores, args):
 		vOut.write(image)
 	vOut.release()
 	command = ("ffmpeg -y -i %s -i %s -threads %d -c:v copy -c:a copy %s -loglevel panic" % \
-		(os.path.join(args.pyaviPath, 'video_only.avi'), os.path.join(args.pyaviPath, 'audio.wav'), \
+		(os.path.join(args.pyaviPath, 'video_only.avi'), args.audioFilePath, \
 		args.nDataLoaderThread, os.path.join(args.pyaviPath,'video_out.avi'))) 
 	output = subprocess.call(command, shell=True, stdout=None)
 
