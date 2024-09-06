@@ -610,8 +610,9 @@ def filter_with_score(tracks, scores, args, score_threshold=0.5):
 	# print("\n\n *** \n\n ", files, args.pyworkPath)
 	files.sort()
 
-	singleface_data = []
-	multiface_data = []
+	data = []
+
+
 
 	for tidx, track in enumerate(tracks):
 		score = scores[tidx]
@@ -627,32 +628,30 @@ def filter_with_score(tracks, scores, args, score_threshold=0.5):
 
 		args.h_mean.append(h_mean)
 		args.w_mean.append(w_mean)
-
-		if (h_mean + w_mean) /2 >= 200:
-			args.good_frames_200 += len(scores[tidx])
-
-		if (h_mean + w_mean) /2 >= 224:
-			args.good_frames_224 += len(scores[tidx])
-
-		if (h_mean + w_mean) /2 >= 256:
-			args.good_frames_256 += len(scores[tidx])
-
-		if (h_mean + w_mean) /2 >= 300:
-			args.good_frames_300 += len(scores[tidx])
-
-
+		num_frames = len(scores[tidx])
+		# filtered_data.json format:
+		meta_data_to_save = [file_path, num_frames, avg_score, h_mean, w_mean]
 
 		# print("avg_score", avg_score)
 		if avg_score >= score_threshold:
 
 			if multiface:
-				multiface_data.append(file_path)
+				meta_data_to_save.append(False)
 			else:
+				# we only do further face size check for singleface data! Don't care multiface for now
+				meta_data_to_save.append(True)
+				# Just for record
+				if (h_mean + w_mean) / 2 >= 200:
+					args.good_frames_200 += len(scores[tidx])
+				if (h_mean + w_mean) / 2 >= 224:
+					args.good_frames_224 += len(scores[tidx])
+				if (h_mean + w_mean) / 2 >= 256:
+					args.good_frames_256 += len(scores[tidx])
+				if (h_mean + w_mean) / 2 >= 300:
+					args.good_frames_300 += len(scores[tidx])
+			data.append(meta_data_to_save)
 
-				singleface_data.append(file_path)
-
-
-	data = {"singleface_data":singleface_data, "multiface_data":multiface_data}
+	data = {'meta_data': data}
 
 	out_path = os.path.join(args.savePath, "filtered_data.json" )
 	with open(out_path,'w',encoding='utf-8') as f:
