@@ -781,50 +781,62 @@ def main():
 		args.pyworkPath = os.path.join(args.savePath, 'pywork')
 		args.pycropPath = os.path.join(args.savePath, 'pycrop')
 		args.pywholePath = os.path.join(args.savePath, 'pywhole')
-		if os.path.exists(args.savePath):
-			rmtree(args.savePath)
+
+
+		if os.path.exists(args.pycropPath):
+			rmtree(args.pycropPath)
+		if os.path.exists(args.pyworkPath):
+			rmtree(args.pyworkPath)
+		if os.path.exists(args.pywholePath):
+			rmtree(args.pywholePath)
+
 		os.makedirs(args.pyaviPath, exist_ok = True) # The path for the input video, input audio, output video
 		os.makedirs(args.pyframesPath, exist_ok = True) # Save all the video frames
 		os.makedirs(args.pyworkPath, exist_ok = True) # Save the results in this process by the pckl method
 		os.makedirs(args.pycropPath, exist_ok = True) # Save the detected face clips (audio+video) in this process
 		os.makedirs(args.pywholePath, exist_ok=True)  # Save the detected face clips (audio+video) in this process
+
+
+
 		# Extract video
 		args.videoFilePath = os.path.join(args.pyaviPath, 'video.avi')
 		# If duration did not set, extract the whole video, otherwise extract the video from 'args.start' to 'args.start + args.duration'
-		time_1 = time.time()
-		print(f"Extracting video {video_name}")
-		if args.duration == 0:
-			command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -async 1 -r 25 %s -loglevel panic" % \
-				(args.videoPath, args.nDataLoaderThread, args.videoFilePath))
-		else:
-			command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -ss %.3f -to %.3f -async 1 -r 25 %s -loglevel panic" % \
-				(args.videoPath, args.nDataLoaderThread, args.start, args.start + args.duration, args.videoFilePath))
-		subprocess.call(command, shell=True, stdout=None)
-		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the video and save in %s \r\n" %(args.videoFilePath))
-
-		print("Extract video done, time cost %.3f s"%(time.time() - time_1))
+		# time_1 = time.time()
+		# print(f"Extracting video {video_name}")
+		# if args.duration == 0:
+		# 	command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -async 1 -r 25 %s -loglevel panic" % \
+		# 		(args.videoPath, args.nDataLoaderThread, args.videoFilePath))
+		# else:
+		# 	command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -ss %.3f -to %.3f -async 1 -r 25 %s -loglevel panic" % \
+		# 		(args.videoPath, args.nDataLoaderThread, args.start, args.start + args.duration, args.videoFilePath))
+		# subprocess.call(command, shell=True, stdout=None)
+		# sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the video and save in %s \r\n" %(args.videoFilePath))
+		#
+		# print("Extract video done, time cost %.3f s"%(time.time() - time_1))
 		# cost ~= 0.1 * video length , 60 min video will take about 6 min.
 
 		# Extract audio
 
-		time_2 = time.time()
+		# time_2 = time.time()
 
-		args.audioFilePath = os.path.join(args.pyaviPath, 'audio.wav')
-		command = ("ffmpeg -y -i %s -qscale:a 0 -ac 1 -vn -threads %d -ar 16000 %s -loglevel panic" % \
-			(args.videoFilePath, args.nDataLoaderThread, args.audioFilePath))
-		subprocess.call(command, shell=True, stdout=None)
-		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the audio and save in %s \r\n" %(args.audioFilePath))
-		print("Extract audio done, time cost %.3f s"%(time.time() - time_2))
+		# args.audioFilePath = os.path.join(args.pyaviPath, 'audio.wav')
+		args.audioFilePath = os.path.join(args.pyaviPath,"audio_(Vocals)_Kim_Vocal_2.wav")
+
+		# command = ("ffmpeg -y -i %s -qscale:a 0 -ac 1 -vn -threads %d -ar 16000 %s -loglevel panic" % \
+		# 	(args.videoFilePath, args.nDataLoaderThread, args.audioFilePath))
+		# subprocess.call(command, shell=True, stdout=None)
+		# sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the audio and save in %s \r\n" %(args.audioFilePath))
+		# print("Extract audio done, time cost %.3f s"%(time.time() - time_2))
 		# Tiny time cost, can be ignored
 
 
-		time_3 = time.time()
+		# time_3 = time.time()
 		# Extract the video frames
-		command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -f image2 %s -loglevel panic" % \
-			(args.videoFilePath, args.nDataLoaderThread, os.path.join(args.pyframesPath, '%06d.jpg')))
-		subprocess.call(command, shell=True, stdout=None)
-		sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the frames and save in %s \r\n" %(args.pyframesPath))
-		print("Extract video frame done, time cost %.3f s"%(time.time() - time_3))
+		# command = ("ffmpeg -y -i %s -qscale:v 2 -threads %d -f image2 %s -loglevel panic" % \
+		# 	(args.videoFilePath, args.nDataLoaderThread, os.path.join(args.pyframesPath, '%06d.jpg')))
+		# subprocess.call(command, shell=True, stdout=None)
+		# sys.stderr.write(time.strftime("%Y-%m-%d %H:%M:%S") + " Extract the frames and save in %s \r\n" %(args.pyframesPath))
+		# print("Extract video frame done, time cost %.3f s"%(time.time() - time_3))
 		# cost ~= 0.12 * video length
 
 		time_4 = time.time()
