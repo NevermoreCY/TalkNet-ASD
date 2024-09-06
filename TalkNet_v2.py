@@ -17,6 +17,8 @@ from talkNet import talkNet
 import numpy as np
 import json
 
+# from audio_separator.separator import Separator
+
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description = "TalkNet Demo or Columnbia ASD Evaluation")
@@ -141,7 +143,7 @@ def inference_video(args, n_worker=8):
 	# GPU: Face detection, output is the list contains the face location and score in this frame
 	flist = glob.glob(os.path.join(args.pyframesPath, '*.jpg'))
 	flist.sort()
-
+	args.total_frames += len(flist)
 	chunk_size = len(flist) // n_worker
 	chunks =  [flist[i:i + chunk_size] for i in range(0, len(flist), chunk_size)]
 	offsets = [sum([len(c) for c in chunks[:i]]) for i in range(len(chunks))]
@@ -372,9 +374,15 @@ def crop_video(args, track, cropFile):
 	flist = glob.glob(os.path.join(args.pyframesPath, '*.jpg')) # Read the frames
 	flist.sort()
 	vOut = cv2.VideoWriter(cropFile + 't.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (224,224))# Write video
-	dets = {'x':[], 'y':[], 's':[]}
+	face_shapes = []
+	dets = {'x':[], 'y':[], 's':[] , 'w':[], 'h':[]}
 	for det in track['bbox']: # Read the tracks
-		dets['s'].append(max((det[3]-det[1]), (det[2]-det[0]))/2)
+		w = det[2] - det[0]
+		h = det[3] - det[1]
+		# print("wid")
+		dets['s'].append(max(w, h) /2)
+		dets['w'].append(w)
+		dets['h'].append(h)
 		dets['y'].append((det[1]+det[3])/2) # crop center x
 		dets['x'].append((det[0]+det[2])/2) # crop center y
 	dets['s'] = signal.medfilt(dets['s'], kernel_size=13)  # Smooth detections
@@ -402,7 +410,7 @@ def crop_video(args, track, cropFile):
 			  (cropFile, audioTmp, args.nDataLoaderThread, cropFile)) # Combine audio and video file
 	output = subprocess.call(command, shell=True, stdout=None)
 	os.remove(cropFile + 't.avi')
-	return {'track':track, 'proc_track':dets}
+	return {'track':track, 'proc_track':dets }
 
 
 def crop_video_whole(args, track, cropFile,cropFile_whole):
@@ -410,9 +418,14 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 	flist = glob.glob(os.path.join(args.pyframesPath, '*.jpg')) # Read the frames
 	flist.sort()
 
-	dets = {'x':[], 'y':[], 's':[]}
-	for det in track['bbox']: # Read the tracks
-		dets['s'].append(max((det[3]-det[1]), (det[2]-det[0]))/2)
+	dets = {'x': [], 'y': [], 's': [], 'w': [], 'h': []}
+	for det in track['bbox']:  # Read the tracks
+		w = det[2] - det[0]
+		h = det[3] - det[1]
+		# print("height and widths are ", h,w)
+		dets['h'].append(h)
+		dets['w'].append(w)
+		dets['s'].append(max(h, w)/2)
 		dets['y'].append((det[1]+det[3])/2) # crop center x
 		dets['x'].append((det[0]+det[2])/2) # crop center y
 	dets['s'] = signal.medfilt(dets['s'], kernel_size=13)  # Smooth detections
@@ -426,7 +439,7 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 	vOut = cv2.VideoWriter(cropFile + 't.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (224, 224))  # Write video
 	vOut_whole = cv2.VideoWriter(cropFile_whole + 't.avi', cv2.VideoWriter_fourcc(*'XVID'), 25, (image_shape[1], image_shape[0] ))  # Write video
 
-
+	face_shapes = []
 
 	for fidx, frame in enumerate(track['frame']):
 		cs  = args.cropScale
@@ -437,6 +450,8 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 		my  = dets['y'][fidx] + bsi  # BBox center Y
 		mx  = dets['x'][fidx] + bsi  # BBox center X
 		face = frame[int(my-bs):int(my+bs*(1+2*cs)),int(mx-bs*(1+cs)):int(mx+bs*(1+cs))]
+		# print("face shape is ", face.shape)
+		face_shapes.append(face.shape)
 		vOut.write(cv2.resize(face, (224, 224)))
 		vOut_whole.write(image)
 	audioTmp    = cropFile + '.wav'
@@ -459,6 +474,8 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 			   (cropFile_whole , audioTmp, 2, cropFile_whole ))  # Combine audio and video file
 	output = subprocess.call(command_whole, shell=True, stdout=None)
 	os.remove(cropFile_whole  + 't.avi')
+
+	track["face_shapes"] = face_shapes
 
 	return {'track':track, 'proc_track':dets}
 
@@ -604,12 +621,36 @@ def filter_with_score(tracks, scores, args, score_threshold=0.5):
 		file_path = files[tidx]
 		avg_score = np.mean(score)
 
+		h_mean = np.mean(track['proc_track']['h'])
+		w_mean = np.mean(track['proc_track']['w'])
+		print("h_mean, w_mean" ,h_mean, w_mean)
+
+		args.h_mean.append(h_mean)
+		args.w_mean.append(w_mean)
+
+		if (h_mean + w_mean) /2 >= 200:
+			args.good_frames_200 += len(scores[tidx])
+
+		if (h_mean + w_mean) /2 >= 224:
+			args.good_frames_224 += len(scores[tidx])
+
+		if (h_mean + w_mean) /2 >= 256:
+			args.good_frames_256 += len(scores[tidx])
+
+		if (h_mean + w_mean) /2 >= 300:
+			args.good_frames_300 += len(scores[tidx])
+
+
+
 		# print("avg_score", avg_score)
 		if avg_score >= score_threshold:
+
 			if multiface:
 				multiface_data.append(file_path)
 			else:
+
 				singleface_data.append(file_path)
+
 
 	data = {"singleface_data":singleface_data, "multiface_data":multiface_data}
 
@@ -718,6 +759,16 @@ def main():
 	print("# of dataloader thread is set to ," , args.nDataLoaderThread)
 	video_folder = args.videoFolder
 	# target_folder = args.targetFolder
+
+	args.total_frames = 0
+	args.good_frames_200 = 0
+	args.good_frames_224 = 0
+	args.good_frames_256 = 0
+	args.good_frames_300 = 0
+
+
+	args.h_mean = []
+	args.w_mean = []
 
 	for video_name in os.listdir(video_folder):
 		video_path = os.path.join(video_folder, video_name)
@@ -857,6 +908,13 @@ def main():
 		time_9 = time.time()
 		visualization(vidTracks, scores, args)
 		print("visualization done , time cost %.3f s" % (time.time() - time_9))
+		print(f"Total frames are {args.total_frames}, \n"
+			  f" good frames > 200 , {args.good_frames_200} ,  data_ratio {args.good_frames_200 / args.total_frames},\n "
+			  f" good frames > 224 , {args.good_frames_224} ,  data_ratio {args.good_frames_224 / args.total_frames},\n "
+			  f" good frames > 256, {args.good_frames_256} ,  data_ratio {args.good_frames_256 / args.total_frames},\n"
+			  f" good frames > 256, {args.good_frames_300} ,  data_ratio {args.good_frames_300 / args.total_frames},\n")
+	print("\n\n h_mean = " ,args.h_mean, "\n\n w_mean = ", args.w_mean)
+
 
 if __name__ == '__main__':
     main()
