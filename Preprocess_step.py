@@ -14,6 +14,7 @@ parser.add_argument('--targetFolder',           type=str, default="data_processe
 parser.add_argument('--pretrainModel',         type=str, default="pretrain_TalkSet.model",   help='Path for the pretrained TalkNet model')
 parser.add_argument('--worker',             type=int, default=8,   help='number of worker for multiprocessing')
 
+parser.add_argument('--bili',             type=int, default=0,   help='whether it is bilidata, we will rename bilidata')
 parser.add_argument('--nDataLoaderThread',     type=int,   default=16,   help='Number of workers')
 parser.add_argument('--facedetScale',          type=float, default=0.25, help='Scale factor for face detection, the frames will be scale to 0.25 orig')
 parser.add_argument('--minTrack',              type=int,   default=20,   help='Number of min frames for each shot')
@@ -67,10 +68,30 @@ def main():
 	audio_separator_model_path = os.path.dirname(audio_separator_model_file)
 	audio_separator_model_name = os.path.basename(audio_separator_model_file)
 
-	for video_name in os.listdir(video_folder):
+	target_name_list = os.listdir(args.targetFolder)
+	print(target_name_list)
+	current_name_list = os.listdir(video_folder)
+	print(current_name_list)
+	to_process_name = []
+	for item in current_name_list:
+		if item not in target_name_list:
+			to_process_name.append(item)
+	print(to_process_name)
+
+	numpy.save("to_process_name.npy", to_process_name)
+
+	for video_name in to_process_name:
+
+
 		video_path = os.path.join(video_folder, video_name)
 
 		args.videoPath = video_path
+
+		if args.bili:
+			video_name_l = video_name.split("-")
+			video_name = video_name_l[1] + "-" + video_name_l[2] + "-" + video_name_l[3] + "-" + video_name_l[4]
+			print("bili video name is ",video_name)
+
 		args.savePath = os.path.join(args.targetFolder, video_name)
 
 		# Initialization

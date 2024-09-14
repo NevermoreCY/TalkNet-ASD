@@ -765,11 +765,24 @@ def main():
 	args.good_frames_256 = 0
 	args.good_frames_300 = 0
 
+	# target_name_list = os.listdir(args.targetFolder)
+	# print(target_name_list)
+	# current_name_list = os.listdir(video_folder)
+	# print(current_name_list)
+	# to_process_name = []
+	# for item in current_name_list:
+	# 	if item not in target_name_list:
+	# 		to_process_name.append(item)
+	# print(to_process_name)
+
+	# to_process_name = current_name_list
+	to_process_name = np.load("to_process_name.npy")
+	print(to_process_name)
 
 	args.h_mean = []
 	args.w_mean = []
 
-	for video_name in os.listdir(video_folder):
+	for video_name in to_process_name:
 		video_path = os.path.join(video_folder, video_name)
 
 		args.videoPath = video_path
@@ -916,14 +929,14 @@ def main():
 
 		# Generate visualization video
 		# This is only for validation, you can remove this part for faster speed.
-		time_9 = time.time()
-		visualization(vidTracks, scores, args)
-		print("visualization done , time cost %.3f s" % (time.time() - time_9))
+		# time_9 = time.time()
+		# visualization(vidTracks, scores, args)
+		# print("visualization done , time cost %.3f s" % (time.time() - time_9))
 		print(f"Total frames are {args.total_frames}, \n"
 			  f" good frames > 200 , {args.good_frames_200} ,  data_ratio {args.good_frames_200 / args.total_frames},\n "
 			  f" good frames > 224 , {args.good_frames_224} ,  data_ratio {args.good_frames_224 / args.total_frames},\n "
 			  f" good frames > 256, {args.good_frames_256} ,  data_ratio {args.good_frames_256 / args.total_frames},\n"
-			  f" good frames > 256, {args.good_frames_300} ,  data_ratio {args.good_frames_300 / args.total_frames},\n")
+			  f" good frames > 300, {args.good_frames_300} ,  data_ratio {args.good_frames_300 / args.total_frames},\n")
 	print("\n\n h_mean = " ,args.h_mean, "\n\n w_mean = ", args.w_mean)
 
 
