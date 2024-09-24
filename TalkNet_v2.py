@@ -604,10 +604,12 @@ def visualization(tracks, scores, args):
 	output = subprocess.call(command, shell=True, stdout=None)
 
 
-def split_into_chunks(score_list, score_thresh=0.5, min_bad_frames = 25, min_good_frames = 20, debug=False):
+def split_into_chunks(score_list, score_thresh=0, min_bad_frames = 25, min_good_frames = 20, debug=False):
 	if debug:
 		print("score list len : ", len(score_list))
+	print("score_thresh" , score_thresh)
 	chunks = []
+
 
 	cur_unmatched_frames = 0
 	cur_good = True
@@ -648,7 +650,7 @@ def split_into_chunks(score_list, score_thresh=0.5, min_bad_frames = 25, min_goo
 				previous_chunk_size = result[-1][1] - result[-1][0]
 				if debug:
 					print("cur_chunk_size" , cur_chunk_size, "previous_chunk_size",  previous_chunk_size)
-				if (chunk[1] - chunk[0]) < min_bad_frames and (chunk[0] - result[-1][1]) <= 2 and previous_chunk_size > cur_chunk_size:
+				if (chunk[1] - chunk[0]) < min_bad_frames and (chunk[0] - result[-1][1]) <= 3:
 					# extend previous chunk
 					# print("extend previous chunk", result[-1])
 					result[-1][1] = chunk[1]
@@ -695,11 +697,12 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 		file_path = files[tidx]
 
 		print("\n\n*** DEBUGING *** \n\n\n current file is :", file_path)
-		print("\n track keys ", track.keys(), track['track'].keys() )
-		print(track['track'])
-		print(track['track']['frame'])
+		# print("\n track keys ", track.keys(), track['track'].keys() )
+		# print(track['track'])
+		# print(track['track']['frame'])
 
 		# start_frame =
+		# print("score:",score)
 
 
 		good_chunks = split_into_chunks(score,score_thresh=score_threshold, min_bad_frames = 25, min_good_frames = 20, debug=False)
@@ -714,19 +717,21 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 			example_frame = track['track']['frame'][0]
 			image = cv2.imread(flist[example_frame])
 			image_shape = image.shape
-			print("Sample image shape is ," ,image_shape)
+			# print("Sample image shape is ," ,image_shape)
 			chunk_id = 0
 			for chunk in good_chunks:
 				# we generate a video for each chunk
-				chunk_start_frame = chunk[0] -5
+				chunk_start_frame = chunk[0]
 				if chunk_start_frame <0 :
 					chunk_start_frame = 0
 				chunk_end_frame = chunk[1]+1
 				chunk_file_path = file_path[:-4] +'_'+ ('%03d' % chunk_id)
 				print("chunk_file_path is ", chunk_file_path)
+				# print("chunk start frame :",chunk_start_frame,chunk_end_frame)
 				vOut_whole = cv2.VideoWriter(chunk_file_path + 't.avi', cv2.VideoWriter_fourcc(*'XVID'), 25,
 											 (image_shape[1], image_shape[0]))
 
+				# print("frames are :", track['track']['frame'][chunk_start_frame:chunk_end_frame])
 				# gather the frames:
 				for fidx, frame in enumerate(track['track']['frame'][chunk_start_frame:chunk_end_frame]):
 					image = cv2.imread(flist[frame])
@@ -734,7 +739,8 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 
 				audioTmp = chunk_file_path + '.wav'
 				audioStart = (track['track']['frame'][chunk_start_frame]) / 25
-				audioEnd = (track['track']['frame'][chunk_end_frame] + 1) / 25
+				audioEnd = (track['track']['frame'][chunk_end_frame] +1 ) / 25
+				# print("audio start", audioStart, "audio end", audioEnd)
 				vOut_whole.release()
 
 				# Crop audio file
@@ -756,7 +762,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 				num_frames = chunk[1] - chunk[0]
 				avg_score = np.mean(score[chunk[0]:chunk[1]])
 				# filtered_data.json format:
-				meta_data_to_save = [chunk_file_path, num_frames, avg_score, h_mean, w_mean , int(start_frame+chunk[0]), int(start_frame+chunk[1])]
+				meta_data_to_save = [chunk_file_path, num_frames, avg_score, h_mean, w_mean , int(chunk_start_frame), int(chunk_end_frame)]
 
 				if multiface:
 					meta_data_to_save.append(False)
@@ -773,6 +779,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 				if (h_mean + w_mean) / 2 >= 300:
 					args.good_frames_300 += len(scores[tidx])
 				data.append(meta_data_to_save)
+				chunk_id+=1
 
 	data = {'meta_data': data}
 
@@ -1042,9 +1049,10 @@ def main():
 		# print("\n\n *** \n\n " , files , args.pyworkPath)
 		files.sort()
 		scores = evaluate_network(files, args)
-
+		score_thresh = 0
+		print("\n\n score_thresh is : ", score_thresh)
 		# FILTER tracks with high score without multiple faces
-		filter_with_score(vidTracks, scores, args)
+		filter_with_score(vidTracks, scores, args, score_thresh)
 		print("face with score done, time cost %.3f s"%(time.time() - time_8))
 
 
