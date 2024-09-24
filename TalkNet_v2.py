@@ -603,7 +603,81 @@ def visualization(tracks, scores, args):
 		args.nDataLoaderThread, os.path.join(args.pyaviPath,'video_out.avi'))) 
 	output = subprocess.call(command, shell=True, stdout=None)
 
-def filter_with_score(tracks, scores, args, score_threshold=0.5):
+
+def split_into_chunks(score_list, score_thresh=0.5, min_bad_frames = 25, min_good_frames = 20, debug=False):
+	if debug:
+		print("score list len : ", len(score_list))
+	chunks = []
+
+	cur_unmatched_frames = 0
+	cur_good = True
+	start_f = 0
+	end_f = 0
+	for frame_id in range(len(score_list)):
+		if cur_good:
+			#if score_list[frame_id] >= score_thresh:
+			#	print("good")
+			if score_list[frame_id] < score_thresh:
+				end_f = frame_id
+				chunks.append([start_f,end_f,cur_good])
+				cur_good = False
+				start_f = frame_id
+
+		elif not cur_good:
+			if score_list[frame_id] >= score_thresh:
+				end_f = frame_id
+				chunks.append([start_f, end_f, cur_good])
+				cur_good = True
+				start_f = frame_id
+	if start_f < frame_id:
+		chunks.append([start_f,frame_id,cur_good])
+	if debug:
+		print("\n\n DEBUG chunks are \n\n ", chunks)
+
+	result = []
+	for chunk in chunks:
+		if debug:
+			print("\n chunk:",chunk, "\n Result:" ,result)
+		if result == []:
+			if chunk[2] and (chunk[1]- chunk[0])>0:
+				result.append(chunk)
+				# print(1)
+		else: # there is item in result
+			if not chunk[2]: # bad
+				cur_chunk_size = chunk[1] - chunk[0]
+				previous_chunk_size = result[-1][1] - result[-1][0]
+				if debug:
+					print("cur_chunk_size" , cur_chunk_size, "previous_chunk_size",  previous_chunk_size)
+				if (chunk[1] - chunk[0]) < min_bad_frames and (chunk[0] - result[-1][1]) <= 2 and previous_chunk_size > cur_chunk_size:
+					# extend previous chunk
+					# print("extend previous chunk", result[-1])
+					result[-1][1] = chunk[1]
+					# print("extended ", result[-1])
+					# print(2)
+				# print(2.5)
+
+			elif chunk[2]: # good
+				if (chunk[0] - result[-1][1]) <= 2:
+					result[-1][1] = chunk[1]
+					# print(3)
+				else:
+					result.append(chunk)
+					# print(4)
+	print("\n After connect, good chunks are : ", result)
+
+	good_chunks = []
+	for chunk in result:
+		chunk_size = chunk[1] - chunk[0]
+		if chunk_size > min_good_frames:
+			good_chunks.append(chunk)
+	print("\n Godd chunks are : ", good_chunks)
+
+	return good_chunks
+
+
+
+
+def filter_with_score(tracks, scores, args, score_threshold=0):
 
 
 	files = glob.glob("%s/*.avi" % args.pywholePath)
@@ -613,33 +687,82 @@ def filter_with_score(tracks, scores, args, score_threshold=0.5):
 	data = []
 
 
-
 	for tidx, track in enumerate(tracks):
 		score = scores[tidx]
 		# print("tidx ", tidx )
 		# print("score", score)
 		multiface = track['track']['multiface']
 		file_path = files[tidx]
-		avg_score = np.mean(score)
 
-		h_mean = np.mean(track['proc_track']['h'])
-		w_mean = np.mean(track['proc_track']['w'])
-		print("h_mean, w_mean" ,h_mean, w_mean)
+		print("\n\n*** DEBUGING *** \n\n\n current file is :", file_path)
+		print("\n track keys ", track.keys(), track['track'].keys() )
+		print(track['track'])
+		print(track['track']['frame'])
 
-		args.h_mean.append(h_mean)
-		args.w_mean.append(w_mean)
-		num_frames = len(scores[tidx])
-		# filtered_data.json format:
-		meta_data_to_save = [file_path, num_frames, avg_score, h_mean, w_mean]
+		# start_frame =
 
-		# print("avg_score", avg_score)
-		if avg_score >= score_threshold:
 
-			if multiface:
-				meta_data_to_save.append(False)
-			else:
-				# we only do further face size check for singleface data! Don't care multiface for now
-				meta_data_to_save.append(True)
+		good_chunks = split_into_chunks(score,score_thresh=score_threshold, min_bad_frames = 25, min_good_frames = 20, debug=False)
+
+
+		if good_chunks:
+			chunk_num = len(good_chunks)
+			start_frame = track['track']['frame'][0]
+			flist = glob.glob(os.path.join(args.pyframesPath, '*.jpg'))  # Read the frames
+			flist.sort()
+
+			example_frame = track['track']['frame'][0]
+			image = cv2.imread(flist[example_frame])
+			image_shape = image.shape
+			print("Sample image shape is ," ,image_shape)
+			chunk_id = 0
+			for chunk in good_chunks:
+				# we generate a video for each chunk
+				chunk_start_frame = chunk[0] -5
+				if chunk_start_frame <0 :
+					chunk_start_frame = 0
+				chunk_end_frame = chunk[1]+1
+				chunk_file_path = file_path[:-4] +'_'+ ('%03d' % chunk_id)
+				print("chunk_file_path is ", chunk_file_path)
+				vOut_whole = cv2.VideoWriter(chunk_file_path + 't.avi', cv2.VideoWriter_fourcc(*'XVID'), 25,
+											 (image_shape[1], image_shape[0]))
+
+				# gather the frames:
+				for fidx, frame in enumerate(track['track']['frame'][chunk_start_frame:chunk_end_frame]):
+					image = cv2.imread(flist[frame])
+					vOut_whole.write(image)
+
+				audioTmp = chunk_file_path + '.wav'
+				audioStart = (track['track']['frame'][chunk_start_frame]) / 25
+				audioEnd = (track['track']['frame'][chunk_end_frame] + 1) / 25
+				vOut_whole.release()
+
+				# Crop audio file
+				command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+							(args.audioFilePath, 2, audioStart, audioEnd, audioTmp))
+				output = subprocess.call(command, shell=True, stdout=None)
+
+				# Combine audio and video file
+				command_whole = ("ffmpeg -y -i %st.avi -i %s -threads %d -c:v copy -c:a copy %s.avi -loglevel panic" % \
+								 (chunk_file_path, audioTmp, 2, chunk_file_path))
+				output = subprocess.call(command_whole, shell=True, stdout=None)
+				os.remove(chunk_file_path + 't.avi')
+
+				# For each chunk, we store a meta-data
+				h_mean = np.mean(track['proc_track']['h'][chunk[0]:chunk[1]])
+				w_mean = np.mean(track['proc_track']['w'][chunk[0]:chunk[1]])
+				args.h_mean.append(h_mean)
+				args.w_mean.append(w_mean)
+				num_frames = chunk[1] - chunk[0]
+				avg_score = np.mean(score[chunk[0]:chunk[1]])
+				# filtered_data.json format:
+				meta_data_to_save = [chunk_file_path, num_frames, avg_score, h_mean, w_mean , int(start_frame+chunk[0]), int(start_frame+chunk[1])]
+
+				if multiface:
+					meta_data_to_save.append(False)
+				else:
+					# we only do further face size check for singleface data! Don't care multiface for now
+					meta_data_to_save.append(True)
 				# Just for record
 				if (h_mean + w_mean) / 2 >= 200:
 					args.good_frames_200 += len(scores[tidx])
@@ -649,7 +772,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0.5):
 					args.good_frames_256 += len(scores[tidx])
 				if (h_mean + w_mean) / 2 >= 300:
 					args.good_frames_300 += len(scores[tidx])
-			data.append(meta_data_to_save)
+				data.append(meta_data_to_save)
 
 	data = {'meta_data': data}
 
@@ -756,6 +879,9 @@ def main():
 	# ```
 	print("# of worker is set to ", args.worker)
 	print("# of dataloader thread is set to ," , args.nDataLoaderThread)
+	print(" args.minTrack is :" , args.minTrack)
+	print(" numFailedDet is : ", args.numFailedDet)
+
 	video_folder = args.videoFolder
 	# target_folder = args.targetFolder
 
@@ -929,9 +1055,9 @@ def main():
 
 		# Generate visualization video
 		# This is only for validation, you can remove this part for faster speed.
-		# time_9 = time.time()
-		# visualization(vidTracks, scores, args)
-		# print("visualization done , time cost %.3f s" % (time.time() - time_9))
+		time_9 = time.time()
+		visualization(vidTracks, scores, args)
+		print("visualization done , time cost %.3f s" % (time.time() - time_9))
 		print(f"Total frames are {args.total_frames}, \n"
 			  f" good frames > 200 , {args.good_frames_200} ,  data_ratio {args.good_frames_200 / args.total_frames},\n "
 			  f" good frames > 224 , {args.good_frames_224} ,  data_ratio {args.good_frames_224 / args.total_frames},\n "
