@@ -28,6 +28,9 @@ parser.add_argument('--duration',              type=int, default=0,  help='The d
 parser.add_argument('--evalCol',               dest='evalCol', action='store_true', help='Evaluate on Columnbia dataset')
 parser.add_argument('--colSavePath',           type=str, default="/data08/col",  help='Path for inputs, tmps and outputs')
 
+parser.add_argument('--data_parallel_num',           type=int, default=0,  help='Path for inputs, tmps and outputs')
+parser.add_argument('--job_num',           type=int, default=0,  help='Path for inputs, tmps and outputs')
+
 args = parser.parse_args()
 from multiprocessing import Pool
 
@@ -78,7 +81,21 @@ def main():
 			to_process_name.append(item)
 	print(to_process_name)
 
-	numpy.save("to_process_name.npy", to_process_name)
+	to_process_name.sort()
+
+	# numpy.save("to_process_name.npy", to_process_name)
+	if args.data_parallel_num:
+
+		L = len(to_process_name)
+		job_len = L // args.job_num
+		start_idx = args.job_num * job_len
+		end_idx = start_idx + job_len
+		print("\n\n ** \n\n Data parallel total job is ",args.data_parallel_num , "job len " , job_len, "start_idx", start_idx, " end_idx", end_idx )
+		to_process_name = to_process_name[start_idx:end_idx]
+
+
+
+
 
 	for video_name in to_process_name:
 		video_path = os.path.join(video_folder, video_name)
