@@ -402,7 +402,7 @@ def crop_video(args, track, cropFile):
 	audioStart  = (track['frame'][0]) / 25
 	audioEnd    = (track['frame'][-1]+1) / 25
 	vOut.release()
-	command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+	command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 		      (args.audioFilePath, args.nDataLoaderThread, audioStart, audioEnd, audioTmp))
 	output = subprocess.call(command, shell=True, stdout=None) # Crop audio file
 	_, audio = wavfile.read(audioTmp)
@@ -460,21 +460,24 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 	audioEnd    = (track['frame'][-1]+1) / 25
 	vOut.release()
 	vOut_whole.release()
-	command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+	command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 		      (args.audioFilePath, 2, audioStart, audioEnd, audioTmp))
 	output = subprocess.call(command, shell=True, stdout=None) # Crop audio file
-
+	print(command)
+	print(output)
 	_, audio = wavfile.read(audioTmp)
 	command = ("ffmpeg -y -i %st.avi -i %s -threads %d -c:v copy -c:a copy %s.avi -loglevel panic" % \
 			  (cropFile, audioTmp, 2, cropFile)) # Combine audio and video file
 	output = subprocess.call(command, shell=True, stdout=None)
 	os.remove(cropFile + 't.avi')
-
+	print(command)
+	print(output)
 	command_whole = ("ffmpeg -y -i %st.avi -i %s -threads %d -c:v copy -c:a copy %s.avi -loglevel panic" % \
 			   (cropFile_whole , audioTmp, 2, cropFile_whole ))  # Combine audio and video file
 	output = subprocess.call(command_whole, shell=True, stdout=None)
 	os.remove(cropFile_whole  + 't.avi')
-
+	print(command)
+	print(output)
 	track["face_shapes"] = face_shapes
 
 	return {'track':track, 'proc_track':dets}
@@ -507,7 +510,7 @@ def crop_whole_video(args, track, cropFile):
 	audioStart  = (track['frame'][0]) / 25
 	audioEnd    = (track['frame'][-1]+1) / 25
 	vOut.release()
-	command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+	command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 		      (args.audioFilePath, args.nDataLoaderThread, audioStart, audioEnd, audioTmp))
 	output = subprocess.call(command, shell=True, stdout=None) # Crop audio file
 	_, audio = wavfile.read(audioTmp)
@@ -534,8 +537,13 @@ def evaluate_network(files, args):
 	# durationSet = {1,2,4,6} # To make the result more reliable
 	durationSet = {1,1,1,2,2,2,3,3,4,5,6} # Use this line can get more reliable result
 	for file in tqdm.tqdm(files, total = len(files)):
-		fileName = os.path.splitext(file.split('\\')[-1])[0] # Load audio and video
+		# fileName = os.path.splitext(file.split('\\')[-1])[0] # Load audio and
+		directory, filename = os.path.split(file)
+		# print("\n\n***\n\n", directory,filename)
+		# fileName = os.path.splitext(file.split('/')[-1])[0]
 
+		fileName = os.path.splitext(fileName)[0]
+		# print("fileName = ", fileName, "fileName2 = ", fileName2)
 		_, audio = wavfile.read(os.path.join(args.pycropPath, fileName + '.wav'))
 		audioFeature = python_speech_features.mfcc(audio, 16000, numcep = 13, winlen = 0.025, winstep = 0.010)
 		video = cv2.VideoCapture(os.path.join(args.pycropPath, fileName + '.avi'))
@@ -744,7 +752,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 				vOut_whole.release()
 
 				# Crop audio file
-				command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+				command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 							(args.audioFilePath, 2, audioStart, audioEnd, audioTmp))
 				output = subprocess.call(command, shell=True, stdout=None)
 
