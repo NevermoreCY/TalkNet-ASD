@@ -466,7 +466,7 @@ def crop_video_whole(args, track, cropFile,cropFile_whole):
 	audioEnd    = (track['frame'][-1]+1) / 25
 	vOut.release()
 	vOut_whole.release()
-	command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+	command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 		      (args.audioFilePath, 2, audioStart, audioEnd, audioTmp))
 	output = subprocess.call(command, shell=True, stdout=None) # Crop audio file
 	print(command)
@@ -516,7 +516,7 @@ def crop_whole_video(args, track, cropFile):
 	audioStart  = (track['frame'][0]) / 25
 	audioEnd    = (track['frame'][-1]+1) / 25
 	vOut.release()
-	command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+	command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 		      (args.audioFilePath, args.nDataLoaderThread, audioStart, audioEnd, audioTmp))
 	output = subprocess.call(command, shell=True, stdout=None) # Crop audio file
 	_, audio = wavfile.read(audioTmp)
@@ -758,7 +758,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 				vOut_whole.release()
 
 				# Crop audio file
-				command = ("ffmpeg -y -i %s -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
+				command = ("ffmpeg -y -i '%s' -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 -threads %d -ss %.3f -to %.3f %s -loglevel panic" % \
 							(args.audioFilePath, 2, audioStart, audioEnd, audioTmp))
 				output = subprocess.call(command, shell=True, stdout=None)
 
