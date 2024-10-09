@@ -81,19 +81,14 @@ def main():
 	numpy.save("to_process_name.npy", to_process_name)
 
 	for video_name in to_process_name:
-
-
 		video_path = os.path.join(video_folder, video_name)
-
 		args.videoPath = video_path
-
 		if args.bili:
 			video_name_l = video_name.split("-")
 			video_name = video_name_l[1] + "-" + video_name_l[2] + "-" + video_name_l[3] + "-" + video_name_l[4]
 			print("bili video name is ",video_name)
 
 		args.savePath = os.path.join(args.targetFolder, video_name)
-
 		# Initialization
 		args.pyaviPath = os.path.join(args.savePath, 'pyavi')
 		args.pyframesPath = os.path.join(args.savePath, 'pyframes')

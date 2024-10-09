@@ -762,7 +762,7 @@ def filter_with_score(tracks, scores, args, score_threshold=0):
 				num_frames = chunk[1] - chunk[0]
 				avg_score = np.mean(score[chunk[0]:chunk[1]])
 				# filtered_data.json format:
-				meta_data_to_save = [chunk_file_path, num_frames, avg_score, h_mean, w_mean , int(chunk_start_frame), int(chunk_end_frame)]
+				meta_data_to_save = [chunk_file_path+".avi", num_frames, avg_score, h_mean, w_mean , int(chunk_start_frame), int(chunk_end_frame)]
 
 				if multiface:
 					meta_data_to_save.append(False)
@@ -909,8 +909,10 @@ def main():
 	# print(to_process_name)
 
 	# to_process_name = current_name_list
-	to_process_name = np.load("to_process_name.npy")
-	print(to_process_name)
+	# to_process_name = np.load("to_process_name.npy")
+	to_process_name = os.listdir(args.targetFolder)
+	# print(to_process_name)
+	# print(to_process_name_1)
 
 	args.h_mean = []
 	args.w_mean = []
