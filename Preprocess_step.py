@@ -87,7 +87,7 @@ def main():
 	if args.data_parallel_num:
 
 		L = len(to_process_name)
-		job_len = L // args.job_num
+		job_len = L // args.data_parallel_num
 		start_idx = args.job_num * job_len
 		end_idx = start_idx + job_len
 		print("\n\n ** \n\n Data parallel total job is ",args.data_parallel_num , "job len " , job_len, "start_idx", start_idx, " end_idx", end_idx )
