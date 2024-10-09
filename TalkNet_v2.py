@@ -18,6 +18,9 @@ import numpy as np
 import json
 
 # from audio_separator.separator import Separator
+import multiprocessing
+from multiprocessing import Pool
+multiprocessing.set_start_method('spawn', force=True)
 
 warnings.filterwarnings("ignore")
 
@@ -43,7 +46,7 @@ parser.add_argument('--evalCol',               dest='evalCol', action='store_tru
 parser.add_argument('--colSavePath',           type=str, default="/data08/col",  help='Path for inputs, tmps and outputs')
 
 args = parser.parse_args()
-from multiprocessing import Pool
+
 
 if os.path.isfile(args.pretrainModel) == False: # Download the pretrained model
     Link = "1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea"
@@ -542,8 +545,8 @@ def evaluate_network(files, args):
 		# print("\n\n***\n\n", directory,filename)
 		# fileName = os.path.splitext(file.split('/')[-1])[0]
 
-		fileName = os.path.splitext(fileName)[0]
-		# print("fileName = ", fileName, "fileName2 = ", fileName2)
+		fileName = os.path.splitext(filename)[0]
+		# print("fileName = ", fileName)
 		_, audio = wavfile.read(os.path.join(args.pycropPath, fileName + '.wav'))
 		audioFeature = python_speech_features.mfcc(audio, 16000, numcep = 13, winlen = 0.025, winstep = 0.010)
 		video = cv2.VideoCapture(os.path.join(args.pycropPath, fileName + '.avi'))
@@ -1074,8 +1077,8 @@ def main():
 		# Generate visualization video
 		# This is only for validation, you can remove this part for faster speed.
 		time_9 = time.time()
-		visualization(vidTracks, scores, args)
-		print("visualization done , time cost %.3f s" % (time.time() - time_9))
+		# visualization(vidTracks, scores, args)
+		# print("visualization done , time cost %.3f s" % (time.time() - time_9))
 		print(f"Total frames are {args.total_frames}, \n"
 			  f" good frames > 200 , {args.good_frames_200} ,  data_ratio {args.good_frames_200 / args.total_frames},\n "
 			  f" good frames > 224 , {args.good_frames_224} ,  data_ratio {args.good_frames_224 / args.total_frames},\n "
