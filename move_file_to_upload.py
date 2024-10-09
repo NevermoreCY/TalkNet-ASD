@@ -12,6 +12,7 @@ parser.add_argument('--score_thresh',          type=float, default=0.5, help='sc
 parser.add_argument('--size_thresh',              type=int,   default=224,   help='face_size threshold')
 parser.add_argument('--single_face',              type=bool,   default=True,   help='whether single face in frame')
 parser.add_argument('--mode',              type=str,   default="single_video",   help='whether keep strcture or single video')
+parser.add_argument('--frame_length_thresh',              type=int,   default=70,   help='face_size threshold')
 
 # args = parser.parse_args()
 
@@ -31,7 +32,7 @@ def main():
     score_threshold = args.score_thresh
     size_threshold = args.size_thresh
     single_face_condition = args.single_face
-
+    frame_threshold = args.frame_length_thresh
 
     file_uploaded = os.listdir(upload_dir)
     file_processed = os.listdir(processed_dir)
@@ -46,11 +47,6 @@ def main():
         if filename not in file_uploaded:
             file_todo.append(filename)
     print(file_todo)
-
-
-
-
-
 
     for filename in file_todo:
 
@@ -70,10 +66,10 @@ def main():
         print(data)
         meta_data = data['meta_data']
 
-
         for item in meta_data:
             path = item[0]
-            score =item[2]
+            total_frames = item[1]
+            score = item[2]
             single_face = item[-1]
             h = item[3]
             w = item[4]
@@ -82,11 +78,9 @@ def main():
             size = (h+w) /2
 
             print(file_name, score, single_face, size)
-            if score > score_threshold and size > size_threshold and (single_face or (not single_face_condition)):
+            if total_frames > frame_threshold and score > score_threshold and size > size_threshold and (single_face or (not single_face_condition)):
                 if mode == "keep_structure":
-
                     target_filename = filename.split(".")[0]
-
                     shutil.copy2(processed_dir + filename + "/pywhole/" + file_name,
                              upload_dir + filename + "/pywhole/" + file_name)
                 elif mode == "single_folder":
