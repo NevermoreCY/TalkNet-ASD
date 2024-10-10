@@ -73,7 +73,10 @@ def main():
             single_face = item[-1]
             h = item[3]
             w = item[4]
-            file_name = path.split('\\')[-1]
+
+            directory, file_name = os.path.split(path)
+            print("directory: ", directory)
+            print("file_name: ", file_name)
 
             size = (h+w) /2
 
