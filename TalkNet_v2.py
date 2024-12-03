@@ -1078,7 +1078,7 @@ def main():
 		# print("\n\n *** \n\n " , files , args.pyworkPath)
 		files.sort()
 		scores = evaluate_network(files, args)
-		score_thresh = 0
+		score_thresh = 0.8
 		print("\n\n score_thresh is : ", score_thresh)
 		# FILTER tracks with high score without multiple faces
 		filter_with_score(vidTracks, scores, args, score_thresh)
